@@ -57,6 +57,13 @@ export class InputHandler {
   };
 
   private handleTouchStart = (e: TouchEvent): void => {
+    const target = e.target as HTMLElement;
+
+    // Allow touches on buttons and inputs to pass through
+    if (target.closest('button') || target.closest('input')) {
+      return;
+    }
+
     e.preventDefault();
 
     const touch = e.touches[0];
