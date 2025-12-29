@@ -1,6 +1,6 @@
 import { STORAGE_KEYS } from '../utils/constants';
 
-type SoundName = 'chop' | 'death' | 'highscore';
+type SoundName = 'chop' | 'death' | 'victory';
 
 export class AudioManager {
   private muted: boolean = false;
@@ -37,8 +37,8 @@ export class AudioManager {
         this.playChopSound(audioContext);
       } else if (soundName === 'death') {
         this.playDeathSound(audioContext);
-      } else if (soundName === 'highscore') {
-        this.playHighscoreSound(audioContext);
+      } else if (soundName === 'victory') {
+        this.playVictorySound(audioContext);
       }
     } catch {
       // Ignore audio errors
@@ -81,8 +81,9 @@ export class AudioManager {
     oscillator.stop(ctx.currentTime + 0.3);
   }
 
-  private playHighscoreSound(ctx: AudioContext): void {
-    const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+  private playVictorySound(ctx: AudioContext): void {
+    // Celebratory fanfare: C5, E5, G5, C6 (major chord arpeggio)
+    const notes = [523.25, 659.25, 783.99, 1046.50];
 
     notes.forEach((freq, i) => {
       const oscillator = ctx.createOscillator();
@@ -94,13 +95,35 @@ export class AudioManager {
       oscillator.frequency.value = freq;
       oscillator.type = 'sine';
 
-      const startTime = ctx.currentTime + i * 0.1;
-      gainNode.gain.setValueAtTime(0.2, startTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.2);
+      const startTime = ctx.currentTime + i * 0.12;
+      gainNode.gain.setValueAtTime(0.25, startTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.3);
 
       oscillator.start(startTime);
-      oscillator.stop(startTime + 0.2);
+      oscillator.stop(startTime + 0.3);
     });
+
+    // Final sustained chord
+    setTimeout(() => {
+      const chordNotes = [523.25, 659.25, 783.99];
+      chordNotes.forEach((freq) => {
+        const oscillator = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(ctx.destination);
+
+        oscillator.frequency.value = freq;
+        oscillator.type = 'sine';
+
+        const startTime = ctx.currentTime;
+        gainNode.gain.setValueAtTime(0.15, startTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.5);
+
+        oscillator.start(startTime);
+        oscillator.stop(startTime + 0.5);
+      });
+    }, 500);
   }
 
   setMuted(muted: boolean): void {

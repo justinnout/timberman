@@ -4,11 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#87CEEB" />
-    <meta name="description" content="A fast, reflex-based chopping game. How high can you score?" />
+    <meta name="description" content="A fast, reflex-based chopping game. Race to chop 100 blocks!" />
 
     <!-- Open Graph -->
     <meta property="og:title" content="Timber Game" />
-    <meta property="og:description" content="A fast, reflex-based chopping game. How high can you score?" />
+    <meta property="og:description" content="A fast, reflex-based chopping game. Race to chop 100 blocks!" />
     <meta property="og:type" content="website" />
 
     <title>Timber Game</title>
@@ -34,9 +34,9 @@
 
         <!-- Game Over Screen -->
         <div id="gameover-screen" class="screen">
-          <h2>GAME OVER</h2>
-          <p class="final-score">Score: <span id="final-score">0</span></p>
-          <p class="new-best" id="new-best">New Best!</p>
+          <h2 id="gameover-title">GAME OVER</h2>
+          <p class="final-score">Time: <span id="final-score">0</span></p>
+          <p class="new-best" id="new-best">New Best Time!</p>
           <div class="name-input-container">
             <input
               type="text"
@@ -46,7 +46,7 @@
               autocomplete="off"
             />
           </div>
-          <button id="submit-score-btn" class="btn primary">Submit Score</button>
+          <button id="submit-score-btn" class="btn primary">Submit Time</button>
           <button id="play-again-btn" class="btn secondary">Play Again</button>
         </div>
 
@@ -60,7 +60,7 @@
                 <tr>
                   <th>#</th>
                   <th>Name</th>
-                  <th>Score</th>
+                  <th>Time</th>
                 </tr>
               </thead>
               <tbody id="leaderboard-body"></tbody>

@@ -1,4 +1,5 @@
 import { GameScreen, LeaderboardEntry } from '../utils/types';
+import { TARGET_BLOCKS } from '../utils/constants';
 
 export interface UIElements {
   titleScreen: HTMLElement;
@@ -21,6 +22,7 @@ export interface UIElements {
   playerRank: HTMLElement;
   muteBtn: HTMLElement;
   muteIcon: HTMLElement;
+  gameOverTitle: HTMLElement;
 }
 
 export class UIManager {
@@ -52,11 +54,16 @@ export class UIManager {
       playerRank: document.getElementById('player-rank')!,
       muteBtn: document.getElementById('mute-btn')!,
       muteIcon: document.getElementById('mute-icon')!,
+      gameOverTitle: document.getElementById('gameover-title')!,
     };
   }
 
+  // Helper to format milliseconds as "X.Xs"
+  private formatTime(ms: number): string {
+    return (ms / 1000).toFixed(1) + 's';
+  }
+
   showScreen(screen: GameScreen): void {
-    console.log('showScreen called with:', screen);
     // Hide all screens
     this.elements.titleScreen.classList.remove('active');
     this.elements.gameOverScreen.classList.remove('active');
@@ -80,35 +87,51 @@ export class UIManager {
     }
   }
 
-  updateScore(score: number): void {
-    this.elements.scoreDisplay.textContent = String(score);
+  updateBlocks(blocks: number): void {
+    this.elements.scoreDisplay.textContent = `${blocks}/${TARGET_BLOCKS}`;
   }
 
-  updateTimer(value: number): void {
-    const percentage = value * 100;
+  updateProgress(progress: number): void {
+    const percentage = progress * 100;
     this.elements.timerBar.style.width = `${percentage}%`;
 
-    // Change color based on value
-    if (value < 0.3) {
-      this.elements.timerBar.classList.add('low');
+    // Progress bar fills up - change color as it gets closer to completion
+    if (progress >= 0.9) {
+      this.elements.timerBar.classList.add('almost');
+      this.elements.timerBar.classList.remove('low');
     } else {
+      this.elements.timerBar.classList.remove('almost');
       this.elements.timerBar.classList.remove('low');
     }
   }
 
-  showBestScore(score: number): void {
-    if (score > 0) {
-      this.elements.titleBestScore.textContent = `Best: ${score}`;
+  updateTime(_elapsedMs: number): void {
+    // Could display elapsed time somewhere if needed
+    // For now, blocks and progress bar are the main displays
+  }
+
+  showBestTime(timeMs: number): void {
+    if (timeMs > 0) {
+      this.elements.titleBestScore.textContent = `Best: ${this.formatTime(timeMs)}`;
     } else {
       this.elements.titleBestScore.textContent = '';
     }
   }
 
-  showGameOver(score: number, isNewBest: boolean): void {
-    this.elements.finalScore.textContent = String(score);
+  showGameOver(elapsedMs: number, won: boolean, isNewBest: boolean): void {
+    // Update title based on win/lose
+    if (this.elements.gameOverTitle) {
+      this.elements.gameOverTitle.textContent = won ? 'VICTORY!' : 'GAME OVER';
+      this.elements.gameOverTitle.classList.toggle('victory', won);
+    }
 
-    if (isNewBest) {
+    // Show time
+    this.elements.finalScore.textContent = this.formatTime(elapsedMs);
+
+    // Show new best indicator
+    if (isNewBest && won) {
       this.elements.newBest.classList.add('visible');
+      this.elements.newBest.textContent = 'New Best Time!';
     } else {
       this.elements.newBest.classList.remove('visible');
     }
@@ -131,7 +154,7 @@ export class UIManager {
     this.elements.leaderboardTable.classList.remove('loaded');
   }
 
-  renderLeaderboard(entries: LeaderboardEntry[], playerScore?: number): void {
+  renderLeaderboard(entries: LeaderboardEntry[], playerTimeMs?: number): void {
     this.elements.leaderboardLoading.style.display = 'none';
     this.elements.leaderboardTable.classList.add('loaded');
 
@@ -140,7 +163,7 @@ export class UIManager {
 
     if (entries.length === 0) {
       const row = document.createElement('tr');
-      row.innerHTML = '<td colspan="3" style="text-align: center; color: #aaa;">No scores yet. Be the first!</td>';
+      row.innerHTML = '<td colspan="3" style="text-align: center; color: #aaa;">No times yet. Be the first!</td>';
       tbody.appendChild(row);
       return;
     }
@@ -148,23 +171,23 @@ export class UIManager {
     entries.forEach((entry) => {
       const row = document.createElement('tr');
 
-      // Highlight if this is the player's recent score
-      if (playerScore !== undefined && entry.score === playerScore) {
+      // Highlight if this is the player's recent time
+      if (playerTimeMs !== undefined && entry.timeMs === playerTimeMs) {
         row.classList.add('current-player');
       }
 
       row.innerHTML = `
         <td>${entry.rank}</td>
         <td>${this.escapeHtml(entry.displayName)}</td>
-        <td>${entry.score}</td>
+        <td>${this.formatTime(entry.timeMs)}</td>
       `;
       tbody.appendChild(row);
     });
   }
 
-  showPlayerRank(rank: number, score: number): void {
+  showPlayerRank(rank: number, timeMs: number): void {
     if (rank > 0) {
-      this.elements.playerRank.textContent = `Your score: ${score} (Rank #${rank})`;
+      this.elements.playerRank.textContent = `Your time: ${this.formatTime(timeMs)} (Rank #${rank})`;
     } else {
       this.elements.playerRank.textContent = '';
     }
@@ -175,7 +198,10 @@ export class UIManager {
   }
 
   onSubmitScore(callback: () => void): void {
-    this.elements.submitScoreBtn.addEventListener('click', callback);
+    this.elements.submitScoreBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      callback();
+    });
     this.elements.nameInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         callback();
@@ -184,23 +210,12 @@ export class UIManager {
   }
 
   onPlayAgain(callback: () => void): void {
-    console.log('Setting up Play Again handlers, button:', this.elements.playAgainBtn);
-
-    // Debug: check all event phases
-    this.elements.playAgainBtn.addEventListener('mousedown', (e) => {
-      console.log('Play Again mousedown', e.target);
-    });
-    this.elements.playAgainBtn.addEventListener('mouseup', (e) => {
-      console.log('Play Again mouseup', e.target);
-    });
     this.elements.playAgainBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      console.log('Play Again button clicked');
       callback();
     });
     this.elements.leaderboardPlayBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      console.log('Leaderboard Play button clicked');
       callback();
     });
   }
@@ -223,7 +238,7 @@ export class UIManager {
 
   enableSubmitButton(): void {
     this.elements.submitScoreBtn.removeAttribute('disabled');
-    this.elements.submitScoreBtn.textContent = 'Submit Score';
+    this.elements.submitScoreBtn.textContent = 'Submit Time';
   }
 
   hideSubmitButton(): void {

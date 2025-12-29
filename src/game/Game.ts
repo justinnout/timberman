@@ -1,25 +1,20 @@
 import { GameState, GameScreen, TreeSegment, Side } from '../utils/types';
 import {
   VISIBLE_SEGMENTS,
-  INITIAL_TIMER_VALUE,
-  TIMER_DECAY_RATE,
-  TIMER_REFILL_BASE,
-  TIMER_REFILL_DECAY,
-  MIN_TIMER_REFILL,
+  TARGET_BLOCKS,
   OBSTACLE_CHANCE_BASE,
   OBSTACLE_CHANCE_INCREASE,
   MAX_OBSTACLE_CHANCE,
-  TIMER_DECAY_INCREASE,
 } from '../utils/constants';
-import { clamp } from '../utils/helpers';
 import { Renderer } from './Renderer';
 import { InputHandler } from './InputHandler';
 import { AudioManager } from './AudioManager';
 
 export interface GameCallbacks {
-  onScoreChange: (score: number) => void;
-  onTimerChange: (value: number) => void;
-  onGameOver: (score: number, isNewBest: boolean) => void;
+  onBlocksChange: (blocks: number) => void;
+  onProgressChange: (progress: number) => void;
+  onTimeChange: (elapsedMs: number) => void;
+  onGameOver: (elapsedMs: number, won: boolean, isNewBest: boolean) => void;
   onScreenChange: (screen: GameScreen) => void;
 }
 
@@ -31,7 +26,7 @@ export class Game {
   private callbacks: GameCallbacks;
   private animationFrameId: number | null = null;
   private lastFrameTime: number = 0;
-  private bestScore: number = 0;
+  private bestTime: number = 0; // 0 means no best time yet
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -53,15 +48,14 @@ export class Game {
   private createInitialState(): GameState {
     return {
       screen: GameScreen.TITLE,
-      score: 0,
+      blocksChopped: 0,
       playerSide: 'left',
       treeSegments: this.generateInitialSegments(),
-      timerValue: INITIAL_TIMER_VALUE,
-      timerDecayRate: TIMER_DECAY_RATE,
-      chopCount: 0,
+      progress: 0,
+      elapsedTime: 0,
       isPlayerDead: false,
+      gameWon: false,
       lastChopTime: 0,
-      deathReason: null,
     };
   }
 
@@ -81,11 +75,11 @@ export class Game {
     return segments;
   }
 
-  private generateSegment(existingSegments: TreeSegment[], chopCount?: number): TreeSegment {
-    const currentChopCount = chopCount ?? this.state?.chopCount ?? 0;
+  private generateSegment(existingSegments: TreeSegment[], blocksChopped?: number): TreeSegment {
+    const currentBlocks = blocksChopped ?? this.state?.blocksChopped ?? 0;
     const obstacleChance = Math.min(
       MAX_OBSTACLE_CHANCE,
-      OBSTACLE_CHANCE_BASE + currentChopCount * OBSTACLE_CHANCE_INCREASE
+      OBSTACLE_CHANCE_BASE + currentBlocks * OBSTACLE_CHANCE_INCREASE
     );
 
     if (Math.random() < obstacleChance) {
@@ -125,7 +119,7 @@ export class Game {
     const deltaTime = Math.min(timestamp - this.lastFrameTime, 33.33);
     this.lastFrameTime = timestamp;
 
-    if (this.state.screen === GameScreen.PLAYING && !this.state.isPlayerDead) {
+    if (this.state.screen === GameScreen.PLAYING && !this.state.isPlayerDead && !this.state.gameWon) {
       this.update(deltaTime);
     }
 
@@ -134,24 +128,16 @@ export class Game {
   };
 
   private update(deltaTime: number): void {
-    // Timer decay with acceleration
-    const decayMultiplier = 1 + this.state.chopCount * TIMER_DECAY_INCREASE;
-    const decay = this.state.timerDecayRate * decayMultiplier * (deltaTime / 1000);
-
-    this.state.timerValue = Math.max(0, this.state.timerValue - decay);
-    this.callbacks.onTimerChange(this.state.timerValue);
-
-    // Check timer death
-    if (this.state.timerValue <= 0) {
-      this.triggerDeath('timeout');
-    }
+    // Track elapsed time
+    this.state.elapsedTime += deltaTime;
+    this.callbacks.onTimeChange(this.state.elapsedTime);
   }
 
   private handleInput(side: Side): void {
     if (this.state.screen === GameScreen.TITLE) {
       this.startGame();
       this.chop(side);
-    } else if (this.state.screen === GameScreen.PLAYING && !this.state.isPlayerDead) {
+    } else if (this.state.screen === GameScreen.PLAYING && !this.state.isPlayerDead && !this.state.gameWon) {
       this.chop(side);
     }
   }
@@ -163,13 +149,12 @@ export class Game {
   }
 
   private startGame(): void {
-    console.log('startGame called, current screen:', this.state?.screen);
     this.state = this.createInitialState();
     this.state.screen = GameScreen.PLAYING;
-    console.log('New state created, switching to PLAYING');
     this.callbacks.onScreenChange(GameScreen.PLAYING);
-    this.callbacks.onScoreChange(0);
-    this.callbacks.onTimerChange(INITIAL_TIMER_VALUE);
+    this.callbacks.onBlocksChange(0);
+    this.callbacks.onProgressChange(0);
+    this.callbacks.onTimeChange(0);
   }
 
   private chop(side: Side): void {
@@ -179,21 +164,14 @@ export class Game {
     // Check collision with bottom segment
     const bottomSegment = this.state.treeSegments[0];
     if (bottomSegment.obstacle === side) {
-      this.triggerDeath('collision');
+      this.triggerDeath();
       return;
     }
 
     // Successful chop
-    this.state.score += 1;
-    this.state.chopCount += 1;
+    this.state.blocksChopped += 1;
+    this.state.progress = this.state.blocksChopped / TARGET_BLOCKS;
     this.state.lastChopTime = performance.now();
-
-    // Refill timer with diminishing returns
-    const refillAmount = Math.max(
-      MIN_TIMER_REFILL,
-      TIMER_REFILL_BASE - this.state.chopCount * TIMER_REFILL_DECAY
-    );
-    this.state.timerValue = clamp(this.state.timerValue + refillAmount, 0, 1);
 
     // Shift segments
     this.state.treeSegments.shift();
@@ -202,36 +180,53 @@ export class Game {
     // Effects
     this.audioManager.play('chop');
     this.renderer.triggerScreenShake();
-    this.callbacks.onScoreChange(this.state.score);
-    this.callbacks.onTimerChange(this.state.timerValue);
+    this.callbacks.onBlocksChange(this.state.blocksChopped);
+    this.callbacks.onProgressChange(this.state.progress);
+
+    // Check win condition
+    if (this.state.blocksChopped >= TARGET_BLOCKS) {
+      this.triggerVictory();
+    }
   }
 
-  private triggerDeath(reason: 'collision' | 'timeout'): void {
-    this.state.isPlayerDead = true;
-    this.state.deathReason = reason;
+  private triggerVictory(): void {
+    this.state.gameWon = true;
 
-    this.audioManager.play('death');
+    this.audioManager.play('victory');
 
-    const isNewBest = this.state.score > this.bestScore;
+    // Check if new best time (lower is better, 0 means no previous best)
+    const isNewBest = this.bestTime === 0 || this.state.elapsedTime < this.bestTime;
     if (isNewBest) {
-      this.bestScore = this.state.score;
-      this.audioManager.play('highscore');
+      this.bestTime = this.state.elapsedTime;
     }
 
     // Delay before showing game over screen
     setTimeout(() => {
       this.state.screen = GameScreen.GAME_OVER;
       this.callbacks.onScreenChange(GameScreen.GAME_OVER);
-      this.callbacks.onGameOver(this.state.score, isNewBest);
+      this.callbacks.onGameOver(this.state.elapsedTime, true, isNewBest);
     }, 500);
   }
 
-  setBestScore(score: number): void {
-    this.bestScore = score;
+  private triggerDeath(): void {
+    this.state.isPlayerDead = true;
+
+    this.audioManager.play('death');
+
+    // Delay before showing game over screen
+    setTimeout(() => {
+      this.state.screen = GameScreen.GAME_OVER;
+      this.callbacks.onScreenChange(GameScreen.GAME_OVER);
+      this.callbacks.onGameOver(this.state.elapsedTime, false, false);
+    }, 500);
   }
 
-  getBestScore(): number {
-    return this.bestScore;
+  setBestTime(timeMs: number): void {
+    this.bestTime = timeMs;
+  }
+
+  getBestTime(): number {
+    return this.bestTime;
   }
 
   getState(): Readonly<GameState> {
@@ -249,7 +244,6 @@ export class Game {
   }
 
   playAgain(): void {
-    console.log('Game.playAgain called');
     this.startGame();
   }
 

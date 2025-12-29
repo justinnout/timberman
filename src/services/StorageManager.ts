@@ -24,7 +24,7 @@ export class StorageManager {
     // Return default data
     const defaultData: LocalPlayerData = {
       version: 1,
-      bestScore: 0,
+      bestTime: 0, // 0 means no best time yet
       lastDisplayName: '',
       sessionId: generateSessionId(),
       totalGamesPlayed: 0,
@@ -40,7 +40,7 @@ export class StorageManager {
       const current = this.getPlayerDataRaw();
       const updated: LocalPlayerData = {
         version: 1,
-        bestScore: data.bestScore ?? current?.bestScore ?? 0,
+        bestTime: data.bestTime ?? current?.bestTime ?? 0,
         lastDisplayName: data.lastDisplayName ?? current?.lastDisplayName ?? '',
         sessionId: data.sessionId ?? current?.sessionId ?? generateSessionId(),
         totalGamesPlayed: data.totalGamesPlayed ?? current?.totalGamesPlayed ?? 0,
@@ -64,14 +64,15 @@ export class StorageManager {
     return null;
   }
 
-  getBestScore(): number {
-    return this.getPlayerData().bestScore;
+  getBestTime(): number {
+    return this.getPlayerData().bestTime;
   }
 
-  setBestScore(score: number): void {
+  setBestTime(timeMs: number): void {
     const current = this.getPlayerData();
-    if (score > current.bestScore) {
-      this.savePlayerData({ bestScore: score });
+    // Lower time is better; 0 means no previous time
+    if (current.bestTime === 0 || timeMs < current.bestTime) {
+      this.savePlayerData({ bestTime: timeMs });
     }
   }
 

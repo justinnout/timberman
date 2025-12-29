@@ -14,15 +14,14 @@ export interface TreeSegment {
 
 export interface GameState {
   screen: GameScreen;
-  score: number;
+  blocksChopped: number;
   playerSide: Side;
   treeSegments: TreeSegment[];
-  timerValue: number;
-  timerDecayRate: number;
-  chopCount: number;
+  progress: number; // 0-1 progress toward TARGET_BLOCKS
+  elapsedTime: number; // milliseconds
   isPlayerDead: boolean;
+  gameWon: boolean;
   lastChopTime: number;
-  deathReason: 'collision' | 'timeout' | null;
 }
 
 export interface ScoreRecord {
@@ -42,14 +41,14 @@ export interface ScoreSubmission {
 export interface LeaderboardEntry {
   rank: number;
   displayName: string;
-  score: number;
+  timeMs: number; // elapsed time in milliseconds
   isCurrentPlayer: boolean;
   date: Date;
 }
 
 export interface LocalPlayerData {
   version: number;
-  bestScore: number;
+  bestTime: number; // best completion time in milliseconds (0 = no record)
   lastDisplayName: string;
   sessionId: string;
   totalGamesPlayed: number;

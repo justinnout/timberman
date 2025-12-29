@@ -46,7 +46,7 @@ export class ScoreManager {
       const { data, error } = await supabase
         .from('scores')
         .select('*')
-        .order('score', { ascending: false })
+        .order('score', { ascending: true }) // Fastest time first
         .limit(limit);
 
       if (error) {
@@ -57,7 +57,7 @@ export class ScoreManager {
       return (data as ScoreRecord[]).map((record, index) => ({
         rank: index + 1,
         displayName: record.display_name,
-        score: record.score,
+        timeMs: record.score, // score field stores time in ms
         isCurrentPlayer: false,
         date: new Date(record.created_at),
       }));
@@ -67,17 +67,18 @@ export class ScoreManager {
     }
   }
 
-  async getPlayerRank(score: number): Promise<number> {
+  async getPlayerRank(timeMs: number): Promise<number> {
     const supabase = getSupabase();
     if (!supabase) {
       return 0;
     }
 
     try {
+      // Count how many players are faster (lower time = better)
       const { count, error } = await supabase
         .from('scores')
         .select('*', { count: 'exact', head: true })
-        .gt('score', score);
+        .lt('score', timeMs);
 
       if (error) {
         console.error('Error getting player rank:', error);
@@ -95,7 +96,7 @@ export class ScoreManager {
     return isSupabaseConfigured();
   }
 
-  getLastSubmittedScore(): number | null {
+  getLastSubmittedTime(): number | null {
     return this.lastSubmittedScore;
   }
 }

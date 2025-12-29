@@ -12,7 +12,7 @@ class TimberGame {
   private uiManager: UIManager;
   private storageManager: StorageManager;
   private scoreManager: ScoreManager;
-  private currentScore: number = 0;
+  private currentTimeMs: number = 0;
 
   constructor() {
     this.audioManager = new AudioManager();
@@ -26,8 +26,9 @@ class TimberGame {
     }
 
     this.game = new Game(canvas, this.audioManager, {
-      onScoreChange: this.handleScoreChange,
-      onTimerChange: this.handleTimerChange,
+      onBlocksChange: this.handleBlocksChange,
+      onProgressChange: this.handleProgressChange,
+      onTimeChange: this.handleTimeChange,
       onGameOver: this.handleGameOver,
       onScreenChange: this.handleScreenChange,
     });
@@ -37,10 +38,10 @@ class TimberGame {
   }
 
   private initialize(): void {
-    // Load best score
-    const bestScore = this.storageManager.getBestScore();
-    this.game.setBestScore(bestScore);
-    this.uiManager.showBestScore(bestScore);
+    // Load best time
+    const bestTime = this.storageManager.getBestTime();
+    this.game.setBestTime(bestTime);
+    this.uiManager.showBestTime(bestTime);
 
     // Load last display name
     const lastName = this.storageManager.getLastDisplayName();
@@ -69,7 +70,7 @@ class TimberGame {
     // Back to title handler
     this.uiManager.onBackToTitle(() => {
       this.game.reset();
-      this.uiManager.showBestScore(this.storageManager.getBestScore());
+      this.uiManager.showBestTime(this.storageManager.getBestTime());
     });
 
     // Mute toggle
@@ -79,29 +80,33 @@ class TimberGame {
     });
   }
 
-  private handleScoreChange = (score: number): void => {
-    this.currentScore = score;
-    this.uiManager.updateScore(score);
+  private handleBlocksChange = (blocks: number): void => {
+    this.uiManager.updateBlocks(blocks);
   };
 
-  private handleTimerChange = (value: number): void => {
-    this.uiManager.updateTimer(value);
+  private handleProgressChange = (progress: number): void => {
+    this.uiManager.updateProgress(progress);
   };
 
-  private handleGameOver = (score: number, isNewBest: boolean): void => {
-    this.currentScore = score;
+  private handleTimeChange = (elapsedMs: number): void => {
+    this.currentTimeMs = elapsedMs;
+    this.uiManager.updateTime(elapsedMs);
+  };
+
+  private handleGameOver = (elapsedMs: number, won: boolean, isNewBest: boolean): void => {
+    this.currentTimeMs = elapsedMs;
 
     // Update storage
-    if (isNewBest) {
-      this.storageManager.setBestScore(score);
+    if (isNewBest && won) {
+      this.storageManager.setBestTime(elapsedMs);
     }
     this.storageManager.incrementGamesPlayed();
 
     // Show game over screen
-    this.uiManager.showGameOver(score, isNewBest);
+    this.uiManager.showGameOver(elapsedMs, won, isNewBest);
 
-    // Show/hide submit button based on Supabase config
-    if (this.scoreManager.isConfigured()) {
+    // Only show submit button for winners and if Supabase is configured
+    if (won && this.scoreManager.isConfigured()) {
       this.uiManager.showSubmitButton();
     } else {
       this.uiManager.hideSubmitButton();
@@ -130,7 +135,7 @@ class TimberGame {
     try {
       const success = await this.scoreManager.submitScore({
         display_name: displayName,
-        score: this.currentScore,
+        score: Math.round(this.currentTimeMs), // Store time in ms as score
         session_id: this.storageManager.getSessionId(),
       });
 
@@ -151,14 +156,16 @@ class TimberGame {
     this.game.setScreen(GameScreen.LEADERBOARD);
     this.uiManager.showLeaderboardLoading();
 
+    const timeMs = Math.round(this.currentTimeMs);
+
     try {
       const [leaderboard, rank] = await Promise.all([
         this.scoreManager.getLeaderboard(),
-        this.scoreManager.getPlayerRank(this.currentScore),
+        this.scoreManager.getPlayerRank(timeMs),
       ]);
 
-      this.uiManager.renderLeaderboard(leaderboard, this.currentScore);
-      this.uiManager.showPlayerRank(rank, this.currentScore);
+      this.uiManager.renderLeaderboard(leaderboard, timeMs);
+      this.uiManager.showPlayerRank(rank, timeMs);
     } catch (err) {
       console.error('Error loading leaderboard:', err);
       this.uiManager.renderLeaderboard([]);
@@ -170,8 +177,8 @@ class TimberGame {
   private playAgain(): void {
     console.log('playAgain called');
     this.game.playAgain();
-    this.uiManager.updateScore(0);
-    this.uiManager.updateTimer(1);
+    this.uiManager.updateBlocks(0);
+    this.uiManager.updateProgress(0);
   }
 }
 

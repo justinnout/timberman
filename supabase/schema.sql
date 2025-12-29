@@ -4,24 +4,28 @@
 -- Run this SQL in the Supabase SQL Editor to set up the leaderboard.
 --
 -- This creates:
---   1. scores table for storing game scores
+--   1. scores table for storing completion times
 --   2. Indexes for fast leaderboard queries
 --   3. Row Level Security (RLS) policies
 --   4. Rate limiting function (optional)
+--
+-- NOTE: The 'score' field stores completion time in milliseconds.
+--       Lower values are better (faster times).
 -- ============================================
 
 -- 1. Create the scores table
+-- Note: 'score' stores completion time in milliseconds (lower = better)
 CREATE TABLE IF NOT EXISTS scores (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   display_name VARCHAR(20) NOT NULL DEFAULT 'Anonymous',
-  score INTEGER NOT NULL CHECK (score >= 0),
+  score INTEGER NOT NULL CHECK (score >= 0), -- Time in milliseconds
   session_id VARCHAR(64) NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- 2. Create indexes for performance
--- Index for fetching top scores (leaderboard)
-CREATE INDEX IF NOT EXISTS idx_scores_score_desc ON scores(score DESC);
+-- Index for fetching fastest times (leaderboard) - ASC for time-based ranking
+CREATE INDEX IF NOT EXISTS idx_scores_score_asc ON scores(score ASC);
 
 -- Index for session-based queries (rate limiting, user history)
 CREATE INDEX IF NOT EXISTS idx_scores_session_created ON scores(session_id, created_at DESC);

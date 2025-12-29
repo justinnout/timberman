@@ -19,18 +19,13 @@ export const PLAYER_HEIGHT = 80;
 export const PLAYER_Y = TREE_BASE_Y - PLAYER_HEIGHT + 10;
 export const PLAYER_OFFSET_X = 20; // Distance from tree center
 
-// Timer configuration
-export const INITIAL_TIMER_VALUE = 1.0;
-export const TIMER_DECAY_RATE = 0.15; // Per second
-export const TIMER_REFILL_BASE = 0.12;
-export const TIMER_REFILL_DECAY = 0.0008; // Refill decreases per chop
-export const MIN_TIMER_REFILL = 0.04;
+// Time Trial configuration
+export const TARGET_BLOCKS = 100; // Blocks needed to win
 
 // Difficulty scaling
 export const OBSTACLE_CHANCE_BASE = 0.35;
 export const OBSTACLE_CHANCE_INCREASE = 0.003; // Per chop
 export const MAX_OBSTACLE_CHANCE = 0.75;
-export const TIMER_DECAY_INCREASE = 0.002; // Per chop
 
 // Colors
 export const COLORS = {
@@ -62,7 +57,7 @@ export const SCREEN_SHAKE_DECAY = 0.85;
 export const SOUNDS = {
   chop: 'chop',
   death: 'death',
-  highscore: 'highscore',
+  victory: 'victory',
 } as const;
 
 // Storage keys
