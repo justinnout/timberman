@@ -154,6 +154,69 @@ html, body {
   animation: bounce 0.5s ease;
 }
 
+.restart-hint {
+  font-size: 0.9rem;
+  color: #aaa;
+  margin-top: 15px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Game Over Leaderboard */
+#gameover-leaderboard {
+  width: 100%;
+  max-width: 300px;
+  max-height: 200px;
+  overflow-y: auto;
+  margin: 15px 0;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+  padding: 10px;
+}
+
+#gameover-leaderboard h3 {
+  font-size: 1rem;
+  margin-bottom: 8px;
+  color: #ffd700;
+}
+
+#gameover-leaderboard-loading {
+  padding: 20px;
+  color: #aaa;
+  font-size: 0.9rem;
+}
+
+#gameover-leaderboard-table {
+  width: 100%;
+  border-collapse: collapse;
+  display: none;
+  font-size: 0.85rem;
+}
+
+#gameover-leaderboard-table.loaded {
+  display: table;
+}
+
+#gameover-leaderboard-table th,
+#gameover-leaderboard-table td {
+  padding: 6px 4px;
+  text-align: left;
+}
+
+#gameover-leaderboard-table th {
+  font-size: 0.8rem;
+  color: #aaa;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#gameover-leaderboard-table tr.current-player {
+  background: rgba(255, 215, 0, 0.2);
+}
+
+#gameover-leaderboard-table tr.current-player td {
+  color: #ffd700;
+  font-weight: 600;
+}
+
 @keyframes bounce {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.2); }

@@ -134,7 +134,7 @@ export class Game {
   }
 
   private handleInput(side: Side): void {
-    if (this.state.screen === GameScreen.TITLE) {
+    if (this.state.screen === GameScreen.TITLE || this.state.screen === GameScreen.GAME_OVER) {
       this.startGame();
       this.chop(side);
     } else if (this.state.screen === GameScreen.PLAYING && !this.state.isPlayerDead && !this.state.gameWon) {
@@ -143,7 +143,7 @@ export class Game {
   }
 
   private handleAnyKey(): void {
-    if (this.state.screen === GameScreen.TITLE) {
+    if (this.state.screen === GameScreen.TITLE || this.state.screen === GameScreen.GAME_OVER) {
       this.startGame();
     }
   }

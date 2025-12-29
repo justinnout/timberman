@@ -23,6 +23,9 @@ export interface UIElements {
   muteBtn: HTMLElement;
   muteIcon: HTMLElement;
   gameOverTitle: HTMLElement;
+  gameOverLeaderboardBody: HTMLElement;
+  gameOverLeaderboardTable: HTMLElement;
+  gameOverLeaderboardLoading: HTMLElement;
 }
 
 export class UIManager {
@@ -55,6 +58,9 @@ export class UIManager {
       muteBtn: document.getElementById('mute-btn')!,
       muteIcon: document.getElementById('mute-icon')!,
       gameOverTitle: document.getElementById('gameover-title')!,
+      gameOverLeaderboardBody: document.getElementById('gameover-leaderboard-body')!,
+      gameOverLeaderboardTable: document.getElementById('gameover-leaderboard-table')!,
+      gameOverLeaderboardLoading: document.getElementById('gameover-leaderboard-loading')!,
     };
   }
 
@@ -152,6 +158,42 @@ export class UIManager {
   showLeaderboardLoading(): void {
     this.elements.leaderboardLoading.style.display = 'block';
     this.elements.leaderboardTable.classList.remove('loaded');
+  }
+
+  showGameOverLeaderboardLoading(): void {
+    this.elements.gameOverLeaderboardLoading.style.display = 'block';
+    this.elements.gameOverLeaderboardTable.classList.remove('loaded');
+  }
+
+  renderGameOverLeaderboard(entries: LeaderboardEntry[], playerTimeMs?: number): void {
+    this.elements.gameOverLeaderboardLoading.style.display = 'none';
+    this.elements.gameOverLeaderboardTable.classList.add('loaded');
+
+    const tbody = this.elements.gameOverLeaderboardBody;
+    tbody.innerHTML = '';
+
+    if (entries.length === 0) {
+      const row = document.createElement('tr');
+      row.innerHTML = '<td colspan="3" style="text-align: center; color: #aaa;">No times yet</td>';
+      tbody.appendChild(row);
+      return;
+    }
+
+    // Show top 5 entries on game over screen
+    entries.slice(0, 5).forEach((entry) => {
+      const row = document.createElement('tr');
+
+      if (playerTimeMs !== undefined && entry.timeMs === playerTimeMs) {
+        row.classList.add('current-player');
+      }
+
+      row.innerHTML = `
+        <td>${entry.rank}</td>
+        <td>${this.escapeHtml(entry.displayName)}</td>
+        <td>${this.formatTime(entry.timeMs)}</td>
+      `;
+      tbody.appendChild(row);
+    });
   }
 
   renderLeaderboard(entries: LeaderboardEntry[], playerTimeMs?: number): void {

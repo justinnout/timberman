@@ -121,8 +121,23 @@ class TimberGame {
       setTimeout(() => {
         this.uiManager.focusNameInput();
       }, 100);
+
+      // Load and display leaderboard
+      this.loadGameOverLeaderboard();
     }
   };
+
+  private async loadGameOverLeaderboard(): Promise<void> {
+    this.uiManager.showGameOverLeaderboardLoading();
+
+    try {
+      const leaderboard = await this.scoreManager.getLeaderboard();
+      this.uiManager.renderGameOverLeaderboard(leaderboard);
+    } catch (err) {
+      console.error('Error loading game over leaderboard:', err);
+      this.uiManager.renderGameOverLeaderboard([]);
+    }
+  }
 
   private async submitScore(): Promise<void> {
     const displayName = this.uiManager.getNameInputValue() || 'Anonymous';

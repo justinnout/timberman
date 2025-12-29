@@ -47,7 +47,25 @@
             />
           </div>
           <button id="submit-score-btn" class="btn primary">Submit Time</button>
+
+          <!-- Inline Leaderboard -->
+          <div id="gameover-leaderboard">
+            <h3>Leaderboard</h3>
+            <div id="gameover-leaderboard-loading">Loading...</div>
+            <table id="gameover-leaderboard-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Name</th>
+                  <th>Time</th>
+                </tr>
+              </thead>
+              <tbody id="gameover-leaderboard-body"></tbody>
+            </table>
+          </div>
+
           <button id="play-again-btn" class="btn secondary">Play Again</button>
+          <p class="restart-hint">or press any key to restart</p>
         </div>
 
         <!-- Leaderboard Screen -->
