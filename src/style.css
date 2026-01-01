@@ -154,13 +154,6 @@ html, body {
   animation: bounce 0.5s ease;
 }
 
-.restart-hint {
-  font-size: 0.9rem;
-  color: #aaa;
-  margin-top: 15px;
-  animation: pulse 1.5s ease-in-out infinite;
-}
-
 /* Game Over Leaderboard */
 #gameover-leaderboard {
   width: 100%;
