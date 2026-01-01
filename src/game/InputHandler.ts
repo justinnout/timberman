@@ -35,6 +35,12 @@ export class InputHandler {
   private handleKeyDown = (e: KeyboardEvent): void => {
     console.log('Key pressed:', e.code, e.key);
 
+    // Ignore key events when typing in input fields
+    const activeElement = document.activeElement;
+    if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+      return;
+    }
+
     // Prevent key repeat
     if (e.repeat) return;
 
